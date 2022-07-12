@@ -14,9 +14,16 @@ func main() {
 	r.Use(middleware.Logger)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, world!"))
+		w.Header().Set("Content-Type", "application/json")
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("{\"text\": \"Hello, world!\"}"))
 	})
 
 	fmt.Println("Listening at localhost:80")
-	http.ListenAndServe(":80", r)
+	err := http.ListenAndServe(":80", r)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
