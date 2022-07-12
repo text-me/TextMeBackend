@@ -17,6 +17,6 @@ func main() {
 		w.Write([]byte("Hello, world!"))
 	})
 
-	fmt.Println("Listening at localhost:3000")
-	http.ListenAndServe(":3000", r)
+	fmt.Println("Listening at localhost:80")
+	http.ListenAndServe(":80", r)
 }
