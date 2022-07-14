@@ -14,10 +14,12 @@ func checkConnection() bool {
 	}
 
 	dbHost := os.Getenv("DB_HOST")
-	dbName := os.Getenv("DB_NAME")
 	dbPassword := os.Getenv("DB_PASSWORD")
 
-	dsn := fmt.Sprintf("host=%s user=postgres password=%s dbname=%s", dbHost, dbPassword, dbName)
+	dsn := fmt.Sprintf("host=%s user=postgres password=%s dbname=postgres", dbHost, dbPassword)
+
+	fmt.Printf("dsn=%s", dsn)
+
 	_, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		fmt.Println(err)
