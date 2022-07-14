@@ -18,6 +18,10 @@ type Message struct {
 	Text string `json:"text"`
 }
 
+type DbConnectionStatus struct {
+	Ok bool `json:"ok"`
+}
+
 var id int
 
 func main() {
@@ -30,6 +34,25 @@ func main() {
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("{\"text\": \"Hello, world!\"}"))
+	})
+
+	r.Get("/checkConnection", func(w http.ResponseWriter, r *http.Request) {
+		isOk := checkConnection()
+
+		status := &DbConnectionStatus{
+			Ok: isOk,
+		}
+
+		response, err := json.Marshal(status)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application-json")
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(response)
 	})
 
 	r.Post("/newMessage", func(writer http.ResponseWriter, request *http.Request) {
