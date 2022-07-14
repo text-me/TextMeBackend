@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,78 +11,55 @@ import (
 )
 
 type NewMessagePayload struct {
-	Text string `json:"text"`
+	Text string
 }
 
-type Message struct {
-	Id   int    `json:"id"`
-	Text string `json:"text"`
+func helloWorldRoute(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("{\"Text\": \"Hello, world!\"}"))
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
-type DbConnectionStatus struct {
-	Ok bool `json:"ok"`
-}
+func newMessageRoute(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var newMessagePayload NewMessagePayload
+	err := decoder.Decode(&newMessagePayload)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-var id int
+	message := addMessage(newMessagePayload.Text)
+	jsonResponse, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application-json")
+
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Can't load .env file")
+	}
+
+	initDb()
+
 	r := chi.NewRouter()
-
 	r.Use(middleware.Logger)
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{\"text\": \"Hello, world!\"}"))
-	})
-
-	r.Get("/checkConnection", func(w http.ResponseWriter, r *http.Request) {
-		isOk := checkConnection()
-
-		status := &DbConnectionStatus{
-			Ok: isOk,
-		}
-
-		response, err := json.Marshal(status)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application-json")
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(response)
-	})
-
-	r.Post("/newMessage", func(writer http.ResponseWriter, request *http.Request) {
-		decoder := json.NewDecoder(request.Body)
-		var newMessagePayload NewMessagePayload
-		err := decoder.Decode(&newMessagePayload)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		var message = &Message{
-			Id:   id + 1,
-			Text: newMessagePayload.Text,
-		}
-
-		response, err := json.Marshal(message)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		writer.Header().Set("Content-Type", "application-json")
-
-		writer.WriteHeader(http.StatusCreated)
-		writer.Write(response)
-
-		id += 1
-	})
+	r.Get("/", helloWorldRoute)
+	r.Post("/newMessage", newMessageRoute)
 
 	fmt.Println("Listening at localhost:80")
 	err := http.ListenAndServe(":80", r)

@@ -2,30 +2,41 @@ package main
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
 )
 
-func checkConnection() bool {
-	if err := godotenv.Load(); err != nil {
-		fmt.Println("Can't load .env file")
-	}
+var db *gorm.DB
 
+type Message struct {
+	gorm.Model
+	Text string
+}
+
+func initDb() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPassword := os.Getenv("DB_PASSWORD")
 
 	dsn := fmt.Sprintf("host=%s user=postgres password=%s dbname=postgres", dbHost, dbPassword)
 
-	fmt.Printf("dsn=%s", dsn)
-
-	_, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
+	if _db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{}); err != nil {
 		fmt.Println(err)
-		return false
+		return
+	} else {
+		db = _db
 	}
 
 	fmt.Println("DB connection is established")
-	return true
+
+	err := db.AutoMigrate(&Message{})
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func addMessage(text string) *Message {
+	insert := &Message{Text: text}
+	db.Create(insert)
+	return insert
 }
