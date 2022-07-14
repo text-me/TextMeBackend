@@ -40,3 +40,10 @@ func addMessage(text string) *Message {
 	db.Create(insert)
 	return insert
 }
+
+func getMessages() []Message {
+	var messages []Message
+	db.Find(&messages)
+
+	return messages
+}
