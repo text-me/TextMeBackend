@@ -76,10 +76,10 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", helloWorldRoute)
-	r.Post("/newMessage", newMessageRoute)
+	r.Post("/newMessage ", newMessageRoute)
 	r.Get("/getMessages", getMessagesRoute)
 
-	fmt.Println(" Listening at localhost:80")
+	fmt.Println("Listening at localhost:80")
 	err := http.ListenAndServe(":80", r)
 	if err != nil {
 		fmt.Println(err)
