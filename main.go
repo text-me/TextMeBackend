@@ -2,16 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/joho/godotenv"
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
+	"github.com/text-me/TextMeBackend/log"
+	"github.com/text-me/TextMeBackend/ws"
+	"net/http"
 )
 
+type WsMessage struct {
+	Type string `json:"type"`
+}
+
 type NewMessagePayload struct {
-	Text string
+	Text string `json:"text"`
 }
 
 func helloWorldRoute(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +24,7 @@ func helloWorldRoute(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("{\"Text\": \"Hello, world!\"}"))
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 }
 
@@ -28,7 +32,7 @@ func getMessagesRoute(w http.ResponseWriter, r *http.Request) {
 	messages := getMessages()
 	jsonResponse, err := json.Marshal(messages)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	}
 
@@ -37,38 +41,13 @@ func getMessagesRoute(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func newMessageRoute(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var newMessagePayload NewMessagePayload
-	err := decoder.Decode(&newMessagePayload)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	message := addMessage(newMessagePayload.Text)
-	jsonResponse, err := json.Marshal(message)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application-json")
-
-	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write(jsonResponse)
-	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 }
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		fmt.Println("Can't load .env file")
+		log.Error("Can't load .env file")
 	}
 
 	initDb()
@@ -76,13 +55,50 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", helloWorldRoute)
-	r.Post("/newMessage", newMessageRoute)
 	r.Get("/getMessages", getMessagesRoute)
 
-	fmt.Println("Listening at localhost:80")
+	// Run WebSocket listener
+	hub := ws.InitHub()
+	go hub.Run()
+	r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
+		ws.ServeWs(hub, w, r)
+	})
+
+	go func() {
+		for {
+			clientWsMessage := <-hub.ReceiveMessage
+
+			var wsMessage WsMessage
+			if err := json.Unmarshal(clientWsMessage.Data, &wsMessage); err != nil {
+				log.Error(err)
+				return
+			}
+
+			switch wsMessage.Type {
+			case "newMessage":
+				var newMessagePayload NewMessagePayload
+				if err := json.Unmarshal(clientWsMessage.Data, &newMessagePayload); err != nil {
+					log.Error(err)
+					return
+				}
+
+				newMessage := addMessage(newMessagePayload.Text)
+
+				response, err := json.Marshal(newMessage)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				clientWsMessage.Client.Send <- response
+			}
+		}
+	}()
+
+	log.Info("Listening at localhost:80")
 	err := http.ListenAndServe(":80", r)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	}
 }

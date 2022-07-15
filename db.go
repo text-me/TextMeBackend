@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/text-me/TextMeBackend/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
@@ -21,17 +22,17 @@ func initDb() {
 	dsn := fmt.Sprintf("host=%s user=postgres password=%s dbname=postgres", dbHost, dbPassword)
 
 	if _db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{}); err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	} else {
 		db = _db
 	}
 
-	fmt.Println("DB connection is established")
+	log.Info("DB connection is established")
 
 	err := db.AutoMigrate(&Message{})
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 }
 
