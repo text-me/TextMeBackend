@@ -10,11 +10,22 @@ import (
 	"net/http"
 )
 
+const (
+	WsClientMessageSend     = "messageSend"
+	WsClientMessageReceived = "messageReceived"
+)
+
 type WsMessage struct {
-	Type string `json:"type"`
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
-type NewMessagePayload struct {
+type MessagePayload struct {
+	Text string `json:"text"`
+}
+
+type MessageJson struct {
+	Id   uint   `json:"id"`
 	Text string `json:"text"`
 }
 
@@ -30,7 +41,15 @@ func helloWorldRoute(w http.ResponseWriter, r *http.Request) {
 
 func getMessagesRoute(w http.ResponseWriter, r *http.Request) {
 	messages := getMessages()
-	jsonResponse, err := json.Marshal(messages)
+	var messagesJson []MessageJson
+	for i := 0; i < len(messages); i++ {
+		messagesJson = append(messagesJson, MessageJson{
+			Id:   messages[i].ID,
+			Text: messages[i].Text,
+		})
+	}
+
+	jsonResponse, err := json.Marshal(messagesJson)
 	if err != nil {
 		log.Error(err)
 		return
@@ -38,7 +57,7 @@ func getMessagesRoute(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application-json")
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		log.Error(err)
@@ -75,16 +94,31 @@ func main() {
 			}
 
 			switch wsMessage.Type {
-			case "newMessage":
-				var newMessagePayload NewMessagePayload
-				if err := json.Unmarshal(clientWsMessage.Data, &newMessagePayload); err != nil {
+			case WsClientMessageSend:
+				var newMessagePayload MessagePayload
+				if err := json.Unmarshal(wsMessage.Data, &newMessagePayload); err != nil {
 					log.Error(err)
 					return
 				}
 
 				newMessage := addMessage(newMessagePayload.Text)
+				newMessageJson := &MessageJson{
+					Id:   newMessage.ID,
+					Text: newMessage.Text,
+				}
 
-				response, err := json.Marshal(newMessage)
+				messageRawJson, err := json.Marshal(newMessageJson)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
+				responseMessage := &WsMessage{
+					Type: WsClientMessageReceived,
+					Data: messageRawJson,
+				}
+
+				response, err := json.Marshal(responseMessage)
 				if err != nil {
 					log.Error(err)
 					return
