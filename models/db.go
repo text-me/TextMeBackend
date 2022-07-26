@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"fmt"
@@ -10,12 +10,7 @@ import (
 
 var db *gorm.DB
 
-type Message struct {
-	gorm.Model
-	Text string
-}
-
-func initDb() {
+func InitDb() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPassword := os.Getenv("DB_PASSWORD")
 
@@ -34,17 +29,4 @@ func initDb() {
 	if err != nil {
 		log.Error(err)
 	}
-}
-
-func addMessage(text string) *Message {
-	insert := &Message{Text: text}
-	db.Create(insert)
-	return insert
-}
-
-func getMessages() []Message {
-	var messages []Message
-	db.Find(&messages)
-
-	return messages
 }

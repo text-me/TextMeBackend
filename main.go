@@ -1,75 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	"github.com/text-me/TextMeBackend/log"
+	"github.com/text-me/TextMeBackend/models"
 	"github.com/text-me/TextMeBackend/ws"
 	"net/http"
 )
-
-const (
-	WsClientMessageSend     = "messageSend"
-	WsClientMessageReceived = "messageReceived"
-)
-
-type WsMessage struct {
-	Type string          `json:"type"`
-	Data json.RawMessage `json:"data"`
-}
-
-type MessagePayload struct {
-	Text string `json:"text"`
-}
-
-type MessageJson struct {
-	Id   uint   `json:"id"`
-	Text string `json:"text"`
-}
-
-func helloWorldRoute(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("{\"Text\": \"Hello, world!\"}"))
-	if err != nil {
-		log.Error(err)
-	}
-}
-
-func getMessagesRoute(w http.ResponseWriter, r *http.Request) {
-	messages := getMessages()
-	var messagesJson []MessageJson
-	for i := 0; i < len(messages); i++ {
-		messagesJson = append(messagesJson, MessageJson{
-			Id:   messages[i].ID,
-			Text: messages[i].Text,
-		})
-	}
-
-	jsonResponse, err := json.Marshal(messagesJson)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application-json")
-
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(jsonResponse)
-	if err != nil {
-		log.Error(err)
-	}
-}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Error("Can't load .env file")
 	}
 
-	initDb()
+	models.InitDb()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -86,46 +32,7 @@ func main() {
 	go func() {
 		for {
 			clientWsMessage := <-hub.ReceiveMessage
-
-			var wsMessage WsMessage
-			if err := json.Unmarshal(clientWsMessage.Data, &wsMessage); err != nil {
-				log.Error(err)
-				return
-			}
-
-			switch wsMessage.Type {
-			case WsClientMessageSend:
-				var newMessagePayload MessagePayload
-				if err := json.Unmarshal(wsMessage.Data, &newMessagePayload); err != nil {
-					log.Error(err)
-					return
-				}
-
-				newMessage := addMessage(newMessagePayload.Text)
-				newMessageJson := &MessageJson{
-					Id:   newMessage.ID,
-					Text: newMessage.Text,
-				}
-
-				messageRawJson, err := json.Marshal(newMessageJson)
-				if err != nil {
-					log.Error(err)
-					return
-				}
-
-				responseMessage := &WsMessage{
-					Type: WsClientMessageReceived,
-					Data: messageRawJson,
-				}
-
-				response, err := json.Marshal(responseMessage)
-				if err != nil {
-					log.Error(err)
-					return
-				}
-
-				clientWsMessage.Client.Send <- response
-			}
+			ws.ProcessRequest(clientWsMessage)
 		}
 	}()
 
