@@ -25,7 +25,7 @@ func InitDb() {
 
 	log.Info("DB connection is established")
 
-	err := db.AutoMigrate(&Message{})
+	err := db.AutoMigrate(&Message{}, &Group{})
 	if err != nil {
 		log.Error(err)
 	}

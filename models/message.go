@@ -24,7 +24,7 @@ func SelectMessages() []Message {
 }
 
 func MessagesToJson(messages []Message) ([]byte, error) {
-	var list []MessageJson
+	list := make([]MessageJson, 0)
 	for _, msg := range messages {
 		list = append(list, MessageJson{
 			Id:   msg.ID,
@@ -32,13 +32,13 @@ func MessagesToJson(messages []Message) ([]byte, error) {
 		})
 	}
 
-	messageRawJson, err := json.Marshal(list)
+	messagesJson, err := json.Marshal(list)
 	if err != nil {
 		log.Error(err)
 		return make([]byte, 0), err
 	}
 
-	return messageRawJson, nil
+	return messagesJson, nil
 }
 
 func (m Message) ToJson() ([]byte, error) {
@@ -47,11 +47,11 @@ func (m Message) ToJson() ([]byte, error) {
 		Text: m.Text,
 	}
 
-	messageRawJson, err := json.Marshal(newMessageJson)
+	messageJson, err := json.Marshal(newMessageJson)
 	if err != nil {
 		log.Error(err)
 		return make([]byte, 0), err
 	}
 
-	return messageRawJson, nil
+	return messageJson, nil
 }

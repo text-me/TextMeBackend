@@ -18,9 +18,10 @@ func main() {
 	models.InitDb()
 
 	r := chi.NewRouter()
+	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Logger)
-	r.Get("/", helloWorldRoute)
 	r.Get("/getMessages", getMessagesRoute)
+	r.Get("/getGroups", getGroupsRoute)
 
 	// Run WebSocket listener
 	hub := ws.InitHub()

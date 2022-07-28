@@ -9,6 +9,8 @@ import (
 const (
 	MessageSend     = "messageSend"
 	MessageReceived = "messageReceived"
+	NewGroupSend    = "newGroupSend"
+	NewGroupReceive = "newGroupReceived"
 )
 
 type Message struct {
@@ -18,6 +20,10 @@ type Message struct {
 
 type MessagePayload struct {
 	Text string `json:"text"`
+}
+
+type NewGroupPayload struct {
+	Title string `json:"title"`
 }
 
 func ProcessRequest(message *ClientMessage) {
@@ -44,6 +50,31 @@ func ProcessRequest(message *ClientMessage) {
 		responseMessage := &Message{
 			Type: MessageReceived,
 			Data: newMessageJson,
+		}
+
+		response, err := json.Marshal(responseMessage)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		message.Client.Send <- response
+	case NewGroupSend:
+		var newGroupPayload NewGroupPayload
+		if err := json.Unmarshal(wsMessage.Data, &newGroupPayload); err != nil {
+			log.Error(err)
+			return
+		}
+
+		newGroup := models.AddGroup(newGroupPayload.Title)
+		newGroupJson, err := newGroup.ToJson()
+		if err != nil {
+			return
+		}
+
+		responseMessage := &Message{
+			Type: NewGroupReceive,
+			Data: newGroupJson,
 		}
 
 		response, err := json.Marshal(responseMessage)
