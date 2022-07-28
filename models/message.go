@@ -10,10 +10,9 @@ type MessageJson struct {
 	Text string `json:"text"`
 }
 
-func AddMessage(text string) *Message {
+func AddMessage(text string) (*Message, error) {
 	insert := &Message{Text: text}
-	db.Create(insert)
-	return insert
+	return insert, db.Create(insert).Error
 }
 
 func SelectMessages() []Message {

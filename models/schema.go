@@ -4,12 +4,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type Message struct {
-	gorm.Model
-	Text string
-}
-
 type Group struct {
 	gorm.Model
-	Title string
+	Title    string
+	Messages []Message
+}
+
+type Message struct {
+	gorm.Model
+	Text    string
+	GroupID uint
+	Group   Group
 }

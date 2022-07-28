@@ -10,10 +10,9 @@ type GroupJson struct {
 	Title string `json:"title"`
 }
 
-func AddGroup(title string) *Group {
+func AddGroup(title string) (*Group, error) {
 	insert := &Group{Title: title}
-	db.Create(insert)
-	return insert
+	return insert, db.Create(insert).Error
 }
 
 func SelectGroups() []Group {

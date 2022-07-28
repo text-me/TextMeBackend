@@ -41,7 +41,10 @@ func ProcessRequest(message *ClientMessage) {
 			return
 		}
 
-		newMessage := models.AddMessage(newMessagePayload.Text)
+		newMessage, err := models.AddMessage(newMessagePayload.Text)
+		if err != nil {
+			return
+		}
 		newMessageJson, err := newMessage.ToJson()
 		if err != nil {
 			return
@@ -66,7 +69,10 @@ func ProcessRequest(message *ClientMessage) {
 			return
 		}
 
-		newGroup := models.AddGroup(newGroupPayload.Title)
+		newGroup, err := models.AddGroup(newGroupPayload.Title)
+		if err != nil {
+			return
+		}
 		newGroupJson, err := newGroup.ToJson()
 		if err != nil {
 			return
